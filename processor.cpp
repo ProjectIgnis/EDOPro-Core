@@ -14,7 +14,8 @@
 #include "effect.h"
 #include "interpreter.h"
 
-void field::add_process(uint16_t type, uint16_t step, effect* peffect, group* target, int64_t arg1, int64_t arg2, int64_t arg3, int64_t arg4, void* ptr1, void* ptr2) {
+void field::add_process(uint16_t type, int16_t step, effect* peffect, group* target, int64_t arg1, int64_t arg2, int64_t arg3, int64_t arg4, void* ptr1, void* ptr2) {
+	emplace_process<Processors::Adjust>(step);
 	auto& new_unit = core.subunits.emplace_back();
 	new_unit.type = type;
 	new_unit.step = step;
@@ -27,6 +28,210 @@ void field::add_process(uint16_t type, uint16_t step, effect* peffect, group* ta
 	new_unit.ptr1 = ptr1;
 	new_unit.ptr2 = ptr2;
 }
+
+int32_t field::operator()(Processors::Adjust& arg) {
+	if(adjust_step(arg))
+		core.units2.pop_front();
+	else
+		++arg.step;
+	return PROCESSOR_FLAG_CONTINUE;
+}
+int32_t field::operator()(Processors::Turn& arg) {
+	if(process_turn(arg))
+		core.units2.pop_front();
+	else
+		++arg.step;
+	return PROCESSOR_FLAG_CONTINUE;
+}
+int32_t field::operator()(Processors::RefreshLoc& arg) {
+	if(refresh_location_info(arg))
+		core.units2.pop_front();
+	else
+		++arg.step;
+	return PROCESSOR_FLAG_CONTINUE;
+
+}
+int32_t field::operator()(Processors::Startup& arg) {
+	if(startup(arg))
+		core.units2.pop_front();
+	else
+		++arg.step;
+	return PROCESSOR_FLAG_CONTINUE;
+}
+int32_t field::operator()(Processors::SelectBattleCmd& arg) {
+	if(select_battle_command(arg)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectIdleCmd& arg) {
+	if(select_idle_command(arg)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectEffectYesNo& arg) {
+	if(select_effect_yes_no(arg)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectYesNo& arg) {
+	if(select_yes_no(arg)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectOption& arg) {
+	if(select_option(arg)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectCard& arg) {
+	if(select_card(arg)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectCardCodes& arg) {
+	if(select_card_codes(arg)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectUnselectCard& arg) {
+	if(select_unselect_card(arg)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectChain& arg) {
+	if(select_chain(arg)) {
+		core.units2.pop_front();
+			return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectPlace& arg) {
+	if(select_place(arg.step, arg.playerid, arg.flag, arg.count, false)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectDisField& arg) {
+	if(select_place(arg.step, arg.playerid, arg.flag, arg.count, true)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectPosition& arg) {
+	if(select_position(arg.step, arg.playerid, arg.code, arg.positions)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectTributeP& arg) {
+	if(select_tribute(arg.step, arg.playerid, arg.cancelable, arg.min, arg.max)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SortChain& arg) {
+	if(sort_chain(arg.step, arg.playerid)) {
+		core.units2.pop_front();
+	} else {
+		++arg.step;
+	}
+	return PROCESSOR_FLAG_CONTINUE;
+}
+int32_t field::operator()(Processors::SelectCounter& arg) {
+	if(select_counter(arg.step, arg.playerid, arg.countertype, arg.count, arg.s, arg.o)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectSum& arg) {
+	if(select_with_sum_limit(arg.step, arg.playerid, arg.acc, arg.min, arg.max)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SortCard& arg) {
+	if(sort_card(arg.step, arg.playerid, arg.is_chain)) {
+		core.units2.pop_front();
+		return PROCESSOR_FLAG_CONTINUE;
+	} else {
+		arg.step = 1;
+		return PROCESSOR_FLAG_WAITING;
+	}
+}
+int32_t field::operator()(Processors::SelectRelease& arg) {
+	if(select_release_cards(arg.step, arg.playerid, arg.cancelable, arg.min, arg.max, arg.check_field, arg.to_check, arg.toplayer, arg.zone))
+		core.units.pop_front();
+	else
+		++arg.step;
+	return PROCESSOR_FLAG_CONTINUE;
+}
+int32_t field::operator()(Processors::SelectTribute& arg) {
+	if(select_tribute_cards(arg.step, arg.target, arg.playerid, arg.cancelable, arg.min, arg.max, arg.toplayer, arg.zone))
+		core.units2.pop_front();
+	else
+		++arg.step;
+	return PROCESSOR_FLAG_CONTINUE;
+}
+
+int32_t field::process2() {
+	if(core.subunits2.size())
+		core.units2.splice(core.units2.begin(), core.subunits2);
+	if(core.units2.size() == 0)
+		return PROCESSOR_FLAG_END;
+	return mpark::visit(*this, core.units2.front());
+}
 int32_t field::process() {
 	if (core.subunits.size())
 		core.units.splice(core.units.begin(), core.subunits);
@@ -35,7 +240,7 @@ int32_t field::process() {
 	auto it = core.units.begin();
 	switch (it->type) {
 	case PROCESSOR_ADJUST: {
-		if (adjust_step(it->step))
+		if(adjust_step({ it->step }))
 			core.units.pop_front();
 		else {
 			++it->step;
@@ -43,21 +248,21 @@ int32_t field::process() {
 		return PROCESSOR_FLAG_CONTINUE;
 	}
 	case PROCESSOR_TURN: {
-		if (process_turn(it->step, it->arg1))
+		if(process_turn({ it->step, it->arg1 }))
 			core.units.pop_front();
 		else
 			++it->step;
 		return PROCESSOR_FLAG_CONTINUE;
 	}
 	case PROCESSOR_REFRESH_LOC: {
-		if (refresh_location_info(it->step))
+		if(refresh_location_info({ it->step }))
 			core.units.pop_front();
 		else
 			++it->step;
 		return PROCESSOR_FLAG_CONTINUE;
 	}
 	case PROCESSOR_STARTUP: {
-		if (startup(it->step))
+		if(startup({ it->step }))
 			core.units.pop_front();
 		else {
 			++it->step;
@@ -65,7 +270,7 @@ int32_t field::process() {
 		return PROCESSOR_FLAG_CONTINUE;
 	}
 	case PROCESSOR_SELECT_BATTLECMD: {
-		if (select_battle_command(it->step, it->arg1)) {
+		if(select_battle_command({ it->step, it->arg1 })) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -74,7 +279,7 @@ int32_t field::process() {
 		}
 	}
 	case PROCESSOR_SELECT_IDLECMD: {
-		if (select_idle_command(it->step, it->arg1)) {
+		if(select_idle_command({ it->step, it->arg1 })) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -83,7 +288,7 @@ int32_t field::process() {
 		}
 	}
 	case PROCESSOR_SELECT_EFFECTYN: {
-		if (select_effect_yes_no(it->step, it->arg1, it->arg2, (card*)it->ptarget)) {
+		if(select_effect_yes_no({ it->step, it->arg1, it->arg2, (card*)it->ptarget })) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -92,7 +297,7 @@ int32_t field::process() {
 		}
 	}
 	case PROCESSOR_SELECT_YESNO: {
-		if (select_yes_no(it->step, it->arg1, it->arg2)) {
+		if(select_yes_no({ it->step, it->arg1, it->arg2 })) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -101,7 +306,7 @@ int32_t field::process() {
 		}
 	}
 	case PROCESSOR_SELECT_OPTION: {
-		if (select_option(it->step, it->arg1)) {
+		if(select_option({ it->step, it->arg1 })) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -110,7 +315,7 @@ int32_t field::process() {
 		}
 	}
 	case PROCESSOR_SELECT_CARD: {
-		if (select_card(it->step, it->arg1 & 0xff, (it->arg1 >> 16) & 0xff, (it->arg2) & 0xff, (it->arg2 >> 16) & 0xff)) {
+		if(select_card({ it->step, it->arg1 & 0xff, (it->arg1 >> 16) & 0xff, (it->arg2) & 0xff, (it->arg2 >> 16) & 0xff })) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -119,7 +324,7 @@ int32_t field::process() {
 		}
 	}
 	case PROCESSOR_SELECT_CARD_CODES: {
-		if (select_card_codes(it->step, it->arg1 & 0xff, (it->arg1 >> 16) & 0xff, (it->arg2) & 0xff, (it->arg2 >> 16) & 0xff)) {
+		if(select_card_codes({ it->step, it->arg1 & 0xff, (it->arg1 >> 16) & 0xff, (it->arg2) & 0xff, (it->arg2 >> 16) & 0xff })) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -128,7 +333,7 @@ int32_t field::process() {
 		}
 	}
 	case PROCESSOR_SELECT_UNSELECT_CARD: {
-		if (select_unselect_card(it->step, it->arg1 & 0xff, (it->arg1 >> 16) & 0xff, (it->arg2) & 0xff, (it->arg2 >> 16) & 0xff, (it->arg3) & 0xff)) {
+		if(select_unselect_card({ it->step, it->arg1 & 0xff, (it->arg1 >> 16) & 0xff, (it->arg2) & 0xff, (it->arg2 >> 16) & 0xff, (it->arg3) & 0xff })) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -137,7 +342,7 @@ int32_t field::process() {
 		}
 	}
 	case PROCESSOR_SELECT_CHAIN: {
-		if (select_chain(it->step, it->arg1, (it->arg2 & 0xffff), it->arg2 >> 16)) {
+		if(select_chain({ it->step, it->arg1, (it->arg2 & 0xffff), it->arg2 >> 16 })) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -147,7 +352,7 @@ int32_t field::process() {
 	}
 	case PROCESSOR_SELECT_DISFIELD:
 	case PROCESSOR_SELECT_PLACE: {
-		if(select_place(it->step, it->arg1, it->arg2, it->arg3)) {
+		if(select_place(it->step, it->arg1, it->arg2, it->arg3, it->type == PROCESSOR_SELECT_DISFIELD)) {
 			core.units.pop_front();
 			return PROCESSOR_FLAG_CONTINUE;
 		} else {
@@ -3963,8 +4168,9 @@ void field::calculate_battle_damage(effect** pdamchange, card** preason_card, ui
 		battle_destroyed[1] = bd[1];
 	}
 }
-int32_t field::process_turn(uint16_t step, uint8_t turn_player) {
-	switch(step) {
+int32_t field::process_turn(Processors::Turn& arg) {
+	const auto& turn_player = arg.turn_player;
+	switch(arg.step) {
 	case 0: {
 		//Pre Draw
 		for(const auto& ev : core.used_event) {
@@ -5219,8 +5425,8 @@ void field::refresh_location_info_instant() {
 		message->write<uint32_t>(dis2);
 	}
 }
-int32_t field::refresh_location_info(uint16_t step) {
-	switch(step) {
+int32_t field::refresh_location_info(const Processors::RefreshLoc& arg) {
+	switch(arg.step) {
 	case 0: {
 		effect_set eset;
 		if(is_flag(DUEL_3_COLUMNS_FIELD)) {
@@ -5388,8 +5594,8 @@ int32_t field::refresh_location_info(uint16_t step) {
 	}
 	return TRUE;
 }
-int32_t field::adjust_step(uint16_t step) {
-	switch(step) {
+int32_t field::adjust_step(const Processors::Adjust& arg) {
+	switch(arg.step) {
 	case 0: {
 		core.re_adjust = FALSE;
 		return FALSE;
@@ -5754,8 +5960,8 @@ int32_t field::adjust_step(uint16_t step) {
 	return TRUE;
 }
 
-int32_t field::startup(uint16_t step) {
-	switch(step) {
+int32_t field::startup(const Processors::Startup& arg) {
+	switch(arg.step) {
 	case 0: {
 		core.shuffle_hand_check[0] = FALSE;
 		core.shuffle_hand_check[1] = FALSE;
