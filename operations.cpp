@@ -4658,7 +4658,6 @@ int32_t field::send_to(Processors::SendTo& arg) {
 		return FALSE;
 	}
 	case 10: {
-		auto& param = arg.extra_args;
 		card_set tohand, todeck, tograve, remove, discard, released, destroyed;
 		card_set equipings, overlays;
 		for(auto& pcard : targets->container) {
@@ -5697,7 +5696,7 @@ int32_t field::select_release_cards(Processors::SelectRelease& arg) {
 			core.select_cards.insert(core.select_cards.begin(), core.release_cards_ex_oneof.begin(), core.release_cards_ex_oneof.end());
 		}
 		if(allmust)
-			min = static_cast<int32_t>(core.release_cards_ex.size());
+			min = static_cast<uint16_t>(core.release_cards_ex.size());
 		auto message = pduel->new_message(MSG_HINT);
 		message->write<uint8_t>(HINT_SELECTMSG);
 		message->write<uint8_t>(playerid);
