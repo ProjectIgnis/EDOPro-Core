@@ -5042,8 +5042,8 @@ int32_t field::solve_chain(Processors::SolveChain& arg) {
 			return FALSE;
 		}
 		if(core.summoning_card || core.summoning_proc_group_type)
-			core.subunits.push_back(core.reserved);
-		core.summoning_card = 0;
+			core.subunits.push_back(std::move(core.reserved));
+		core.summoning_card = nullptr;
 		core.summoning_proc_group_type = 0;
 		arg.step = -1;
 		return FALSE;
@@ -5063,7 +5063,7 @@ int32_t field::solve_chain(Processors::SolveChain& arg) {
 		pduel->new_message(MSG_CHAIN_END);
 		reset_chain();
 		if(core.summoning_card || core.summoning_proc_group_type || core.effect_damage_step == 1)
-			core.subunits.push_back(core.reserved);
+			core.subunits.push_back(std::move(core.reserved));
 		core.summoning_proc_group_type = 0;
 		core.summoning_card = nullptr;
 		return FALSE;
