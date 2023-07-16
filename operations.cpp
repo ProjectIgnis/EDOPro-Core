@@ -1829,16 +1829,16 @@ int32_t field::summon(Processors::SummonRule& arg) {
 			arg.step = 4;
 			if(!ignore_count && !core.extra_summon[sumplayer]) {
 				for(const auto& peff : eset) {
-					arg.ptr1 = peff;
+					arg.extra_summon_effect = peff;
 					return FALSE;
 				}
 			}
-			arg.ptr1 = 0;
+			arg.extra_summon_effect = 0;
 			return FALSE;
 		}
 		if(!summon_procedure_effect) {
 			summon_procedure_effect = core.select_effects[returns.at<int32_t>(0)];
-			arg.peffect = summon_procedure_effect;
+			arg.summon_procedure_effect = summon_procedure_effect;
 		}
 		core.select_effects.clear();
 		core.select_options.clear();
@@ -1894,7 +1894,7 @@ int32_t field::summon(Processors::SummonRule& arg) {
 	}
 	case 2: {
 		effect* pextra = core.select_effects[returns.at<int32_t>(0)];
-		arg.ptr1 = pextra;
+		arg.extra_summon_effect = pextra;
 		uint32_t releasable = 0xff00ffu;
 		if(pextra) {
 			std::vector<lua_Integer> retval;
@@ -1908,11 +1908,10 @@ int32_t field::summon(Processors::SummonRule& arg) {
 					releasable = static_cast<uint32_t>(retval[2]);
 			}
 			if(min_tribute < new_min_tribute)
-				min_tribute = new_min_tribute;
+				arg.min_tribute = new_min_tribute;
 			if (summon_procedure_effect && summon_procedure_effect->is_flag(EFFECT_FLAG_SPSUM_PARAM) && summon_procedure_effect->o_range)
 					new_zone = (new_zone >> 16) | (new_zone & 0xffff << 16);
-			zone &= new_zone;
-			arg.arg1 = sumplayer + (ignore_count << 8) + (min_tribute << 16) + (zone << 24);
+			arg.zone &= new_zone;
 		}
 		if(summon_procedure_effect) {
 			arg.step = 3;
@@ -1942,7 +1941,7 @@ int32_t field::summon(Processors::SummonRule& arg) {
 				int32_t fcount = get_mzone_limit(sumplayer, sumplayer, LOCATION_REASON_TOFIELD);
 				if(min == 0 && ct > 0 && fcount > 0) {
 					add_process(PROCESSOR_SELECT_YESNO, 0, 0, 0, sumplayer, 90);
-					arg.arg2 = max;
+					arg.max_allowed_tributes = max;
 				} else {
 					if(min < -fcount + 1) {
 						min = -fcount + 1;
@@ -1958,7 +1957,7 @@ int32_t field::summon(Processors::SummonRule& arg) {
 		if(returns.at<int32_t>(0))
 			return_cards.clear();
 		else {
-			int32_t max = arg.arg2;
+			int32_t max = arg.max_allowed_tributes;
 			select_tribute_cards(target, sumplayer, core.summon_cancelable, 1, max, sumplayer, zone);
 		}
 		arg.step = 4;
@@ -1967,7 +1966,7 @@ int32_t field::summon(Processors::SummonRule& arg) {
 	case 4: {
 		returns.set<int32_t>(0, TRUE);
 		if(summon_procedure_effect->target) {
-			effect* pextra = (effect*)arg.ptr1;
+			auto pextra = arg.extra_summon_effect;
 			uint32_t releasable = 0xff00ffu;
 			if(pextra) {
 				std::vector<lua_Integer> retval;
@@ -2005,8 +2004,7 @@ int32_t field::summon(Processors::SummonRule& arg) {
 				return TRUE;
 			}
 			if(return_cards.list.size()) {
-				card_set* tributes = new card_set(return_cards.list.begin(), return_cards.list.end());
-				arg.peffect = (effect*)tributes;
+				arg.tributes = std::make_unique<card_set>(return_cards.list.begin(), return_cards.list.end());
 			}
 		}
 		effect_set eset;
@@ -2018,14 +2016,12 @@ int32_t field::summon(Processors::SummonRule& arg) {
 					add_process(PROCESSOR_EXECUTE_OPERATION, 0, peffect, 0, sumplayer, 0);
 				}
 			}
-			effect_set* peset = new effect_set;
-			*peset = std::move(eset);
-			arg.ptr2 = peset;
+			arg.spsummon_cost_effects = std::make_unique<effect_set>(std::move(eset));
 		}
 		return FALSE;
 	}
 	case 6: {
-		card_set* tributes = (card_set*)summon_procedure_effect;
+		auto& tributes = arg.tributes;
 		int32_t min = 0;
 		int32_t level = target->get_level();
 		if(level < 5)
@@ -2093,8 +2089,7 @@ int32_t field::summon(Processors::SummonRule& arg) {
 			target->set_material(*tributes);
 			release(std::move(*tributes), 0, REASON_SUMMON | REASON_MATERIAL, sumplayer);
 			target->summon.type |= SUMMON_TYPE_ADVANCE;
-			delete tributes;
-			arg.peffect = 0;
+			arg.tributes.reset();
 			adjust_all();
 		}
 		target->current.reason_effect = 0;
@@ -2110,7 +2105,7 @@ int32_t field::summon(Processors::SummonRule& arg) {
 		target->current.reason_player = sumplayer;
 		returns.set<int32_t>(0, TRUE);
 		if(summon_procedure_effect->operation) {
-			effect* pextra = (effect*)arg.ptr1;
+			auto pextra = arg.extra_summon_effect;
 			uint32_t releasable = 0xff00ffu;
 			if(pextra) {
 				std::vector<lua_Integer> retval;
@@ -2140,7 +2135,7 @@ int32_t field::summon(Processors::SummonRule& arg) {
 		break_effect();
 		if(ignore_count)
 			return FALSE;
-		effect* pextra = (effect*)arg.ptr1;
+		auto pextra = arg.extra_summon_effect;
 		if(!pextra)
 			++core.summon_count[sumplayer];
 		else {
@@ -2197,7 +2192,7 @@ int32_t field::summon(Processors::SummonRule& arg) {
 	case 11: {
 		if(ignore_count)
 			return FALSE;
-		effect* pextra = (effect*)arg.ptr1;
+		auto pextra = arg.extra_summon_effect;
 		if(!pextra)
 			++core.summon_count[sumplayer];
 		else {
@@ -2267,11 +2262,9 @@ int32_t field::summon(Processors::SummonRule& arg) {
 				dec_effect_code(summon_procedure_effect->count_code, summon_procedure_effect->count_flag, summon_procedure_effect->count_hopt_index, sumplayer);
 			}
 		}
-		if(effect_set* peset = (effect_set*)arg.ptr2) {
-			for(const auto& peffect : *peset)
+		if(arg.spsummon_cost_effects) {
+			for(const auto& peffect : *arg.spsummon_cost_effects)
 				remove_oath_effect(peffect);
-			delete peset;
-			arg.ptr2 = nullptr;
 		}
 		if(target->current.location == LOCATION_MZONE)
 			send_to(target, 0, REASON_RULE, sumplayer, sumplayer, LOCATION_GRAVE, 0, 0);
@@ -2283,11 +2276,10 @@ int32_t field::summon(Processors::SummonRule& arg) {
 		if(summon_procedure_effect) {
 			release_oath_relation(summon_procedure_effect);
 		}
-		if(effect_set* peset = (effect_set*)arg.ptr2) {
-			for(const auto& peffect : *peset)
+		if(arg.spsummon_cost_effects) {
+			for(const auto& peffect : *arg.spsummon_cost_effects)
 				release_oath_relation(peffect);
-			delete peset;
-			arg.ptr2 = nullptr;
+			arg.spsummon_cost_effects.reset();
 		}
 		target->set_status(STATUS_SUMMONING, FALSE);
 		target->set_status(STATUS_SUMMON_TURN, TRUE);
@@ -3026,7 +3018,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 	}
 	case 1: {
 		effect* peffect = core.select_effects[returns.at<int32_t>(0)];
-		arg.peffect = peffect;
+		arg.summon_proc_effect = peffect;
 		if(peffect->code == EFFECT_SPSUMMON_PROC_G) {
 			arg.step = 19;
 			return FALSE;
@@ -3057,16 +3049,14 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 					add_process(PROCESSOR_EXECUTE_OPERATION, 0, peffect, 0, sumplayer, 0);
 				}
 			}
-			effect_set* peset = new effect_set;
-			*peset = std::move(eset);
-			arg.ptr1 = peset;
+			arg.special_spsummon_cost_effects = std::make_unique<effect_set>(std::move(eset));
 		}
 		return FALSE;
 	}
 	case 3: {
-		effect* peffect = arg.peffect;
+		auto proc = arg.summon_proc_effect;
 		target->material_cards.clear();
-		if(peffect->operation) {
+		if(proc->operation) {
 			pduel->lua->add_param<PARAM_TYPE_CARD>(target);
 			pduel->lua->add_param<PARAM_TYPE_GROUP>(core.must_use_mats);
 			pduel->lua->add_param<PARAM_TYPE_GROUP>(core.only_use_mats);
@@ -3077,9 +3067,9 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 			core.forced_summon_minc = 0;
 			core.forced_summon_maxc = 0;
 			core.sub_solving_event.push_back(nil_event);
-			add_process(PROCESSOR_EXECUTE_OPERATION, 0, peffect, 0, sumplayer, 0);
+			add_process(PROCESSOR_EXECUTE_OPERATION, 0, proc, 0, sumplayer, 0);
 		}
-		peffect->dec_count(sumplayer);
+		proc->dec_count(sumplayer);
 		return FALSE;
 	}
 	case 4: {
@@ -3091,12 +3081,12 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 			pduel->delete_group(core.only_use_mats);
 			core.only_use_mats = nullptr;
 		}
-		effect* peffect = arg.peffect;
+		auto proc = arg.summon_proc_effect;
 		uint8_t targetplayer = sumplayer;
 		uint8_t positions = POS_FACEUP;
-		if(peffect->is_flag(EFFECT_FLAG_SPSUM_PARAM)) {
-			positions = (uint8_t)peffect->s_range;
-			if(peffect->o_range == 0)
+		if(proc->is_flag(EFFECT_FLAG_SPSUM_PARAM)) {
+			positions = (uint8_t)proc->s_range;
+			if(proc->o_range == 0)
 				targetplayer = sumplayer;
 			else
 				targetplayer = 1 - sumplayer;
@@ -3104,7 +3094,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		if(positions == 0)
 			positions = POS_FACEUP_ATTACK;
 		std::vector<lua_Integer> retval;
-		peffect->get_value(target, 0, retval);
+		proc->get_value(target, 0, retval);
 		const auto sumtype = (retval.size() > 0 ? (static_cast<uint32_t>(retval[0]) & 0xf00ffff) : 0) | SUMMON_TYPE_SPECIAL;
 		uint32_t zone = retval.size() > 1 ? static_cast<uint32_t>(retval[1]) : 0xff;
 		target->summon.type = sumtype;
@@ -3122,7 +3112,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 				pduel->lua->add_param<PARAM_TYPE_INT>(sumtype);
 				pduel->lua->add_param<PARAM_TYPE_INT>(positions);
 				pduel->lua->add_param<PARAM_TYPE_INT>(targetplayer);
-				pduel->lua->add_param<PARAM_TYPE_EFFECT>(peffect);
+				pduel->lua->add_param<PARAM_TYPE_EFFECT>(proc);
 				if(!pduel->lua->check_condition(eff->target, 7))
 					continue;
 			}
@@ -3130,7 +3120,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		}
 		move_to_field(target, sumplayer, targetplayer, LOCATION_MZONE, positions, FALSE, 0, zone, TRUE);
 		target->current.reason = REASON_SPSUMMON;
-		target->current.reason_effect = peffect;
+		target->current.reason_effect = proc;
 		target->current.reason_player = sumplayer;
 		target->summon.player = sumplayer;
 		if(is_flag(DUEL_CANNOT_SUMMON_OATH_OLD)) {
@@ -3153,14 +3143,14 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 			shuffle(1, LOCATION_DECK);
 		set_control(target, target->current.controler, 0, 0);
 		core.phase_action = TRUE;
-		target->current.reason_effect = arg.peffect;
+		target->current.reason_effect = arg.summon_proc_effect;
 		auto message = pduel->new_message(MSG_SPSUMMONING);
 		message->write<uint32_t>(target->data.code);
 		message->write(target->get_info_location());
 		return FALSE;
 	}
 	case 6: {
-		effect* proc = arg.peffect;
+		auto proc = arg.summon_proc_effect;
 		int32_t matreason = REASON_SPSUMMON;
 		if(proc->value == SUMMON_TYPE_SYNCHRO)
 			matreason = REASON_SYNCHRO;
@@ -3193,7 +3183,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 	case 10: {
 		target->set_status(STATUS_SUMMONING, TRUE);
 		target->set_status(STATUS_SUMMON_DISABLED, FALSE);
-		raise_event(target, EVENT_SPSUMMON, arg.peffect, 0, sumplayer, sumplayer, 0);
+		raise_event(target, EVENT_SPSUMMON, arg.summon_proc_effect, 0, sumplayer, sumplayer, 0);
 		process_instant_event();
 		add_process(PROCESSOR_POINT_EVENT, 0, 0, 0, 0x101, TRUE);
 		return FALSE;
@@ -3203,17 +3193,16 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 			arg.step = 14;
 			return FALSE;
 		}
-		if(effect_set* peset = (effect_set*)arg.ptr1) {
-			for(const auto& peffect : *peset)
+		if(arg.special_spsummon_cost_effects) {
+			for(const auto& peffect : *arg.special_spsummon_cost_effects)
 				remove_oath_effect(peffect);
-			delete peset;
-			arg.ptr1 = nullptr;
+			arg.special_spsummon_cost_effects.reset();
 		}
 		if(!is_flag(DUEL_CANNOT_SUMMON_OATH_OLD)) {
-			effect* peffect = arg.peffect;
-			remove_oath_effect(peffect);
-			if(peffect->is_flag(EFFECT_FLAG_COUNT_LIMIT) && (peffect->count_flag & EFFECT_COUNT_CODE_OATH)) {
-				dec_effect_code(peffect->count_code, peffect->count_flag, peffect->count_hopt_index, sumplayer);
+			auto proc = arg.summon_proc_effect;
+			remove_oath_effect(proc);
+			if(proc->is_flag(EFFECT_FLAG_COUNT_LIMIT) && (proc->count_flag & EFFECT_COUNT_CODE_OATH)) {
+				dec_effect_code(proc->count_code, proc->count_flag, proc->count_hopt_index, sumplayer);
 			}
 		}
 		if(target->current.location == LOCATION_MZONE)
@@ -3223,12 +3212,11 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		return TRUE;
 	}
 	case 15: {
-		release_oath_relation(arg.peffect);
-		if(effect_set* peset = (effect_set*)arg.ptr1) {
-			for(const auto& peffect : *peset)
+		release_oath_relation(arg.summon_proc_effect);
+		if(arg.special_spsummon_cost_effects) {
+			for(const auto& peffect : *arg.special_spsummon_cost_effects)
 				release_oath_relation(peffect);
-			delete peset;
-			arg.ptr1 = nullptr;
+			arg.special_spsummon_cost_effects.reset();
 		}
 		target->set_status(STATUS_SUMMONING, FALSE);
 		target->set_status(STATUS_PROC_COMPLETE | STATUS_SPSUMMON_TURN, TRUE);
@@ -3240,7 +3228,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 	case 16: {
 		pduel->new_message(MSG_SPSUMMONED);
 		adjust_instant();
-		effect* proc = arg.peffect;
+		auto proc = arg.summon_proc_effect;
 		int32_t matreason = REASON_SPSUMMON;
 		if(proc->value == SUMMON_TYPE_SYNCHRO)
 			matreason = REASON_SYNCHRO;
@@ -3264,9 +3252,9 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		}
 		if(!is_flag(DUEL_SPSUMMON_ONCE_OLD_NEGATE) && target->spsummon_code)
 			++core.spsummon_once_map[sumplayer][target->spsummon_code];
-		raise_single_event(target, 0, EVENT_SPSUMMON_SUCCESS, arg.peffect, 0, sumplayer, sumplayer, 0);
+		raise_single_event(target, 0, EVENT_SPSUMMON_SUCCESS, arg.summon_proc_effect, 0, sumplayer, sumplayer, 0);
 		process_single_event();
-		raise_event(target, EVENT_SPSUMMON_SUCCESS, arg.peffect, 0, sumplayer, sumplayer, 0);
+		raise_event(target, EVENT_SPSUMMON_SUCCESS, arg.summon_proc_effect, 0, sumplayer, sumplayer, 0);
 		process_instant_event();
 		if(core.current_chain.size() == 0) {
 			adjust_all();
@@ -3276,20 +3264,20 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		return TRUE;
 	}
 	case 20: {
-		effect* peffect = arg.peffect;
-		arg.ptarget = pduel->new_group();
-		if(peffect->operation) {
+		auto proc = arg.summon_proc_effect;
+		arg.cards_to_summon_g = pduel->new_group();
+		if(proc->operation) {
 			core.sub_solving_event.push_back(nil_event);
 			pduel->lua->add_param<PARAM_TYPE_CARD>(target);
-			pduel->lua->add_param<PARAM_TYPE_GROUP>(arg.ptarget);
-			pduel->lua->add_param<PARAM_TYPE_BOOLEAN>(arg.arg3);
-			add_process(PROCESSOR_EXECUTE_OPERATION, 0, peffect, 0, sumplayer, 0);
+			pduel->lua->add_param<PARAM_TYPE_GROUP>(arg.cards_to_summon_g);
+			pduel->lua->add_param<PARAM_TYPE_BOOLEAN>(arg.is_mid_chain);
+			add_process(PROCESSOR_EXECUTE_OPERATION, 0, proc, 0, sumplayer, 0);
 		}
-		peffect->dec_count(sumplayer);
+		proc->dec_count(sumplayer);
 		return FALSE;
 	}
 	case 21: {
-		group* pgroup = arg.ptarget;
+		group* pgroup = arg.cards_to_summon_g;
 		for(auto cit = pgroup->container.begin(); cit != pgroup->container.end(); ) {
 			card* pcard = *cit++;
 			if(!(pcard->data.type & TYPE_MONSTER)
@@ -3308,15 +3296,13 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 						add_process(PROCESSOR_EXECUTE_OPERATION, 0, peffect, 0, sumplayer, 0);
 					}
 				}
-				effect_set* peset = new effect_set;
-				*peset = std::move(eset);
-				arg.ptr1 = peset;
+				arg.special_spsummon_cost_effects = std::make_unique<effect_set>(std::move(eset));
 			}
 		}
 		return FALSE;
 	}
 	case 22: {
-		group* pgroup = arg.ptarget;
+		group* pgroup = arg.cards_to_summon_g;
 		if(pgroup->container.size() == 0)
 			return TRUE;
 		core.phase_action = TRUE;
@@ -3324,15 +3310,15 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		return FALSE;
 	}
 	case 23: {
-		effect* peffect = arg.peffect;
-		group* pgroup = arg.ptarget;
+		auto proc = arg.summon_proc_effect;
+		group* pgroup = arg.cards_to_summon_g;
 		card* pcard = *pgroup->it;
 		pcard->enable_field_effect(false);
 		pcard->current.reason = REASON_SPSUMMON;
-		pcard->current.reason_effect = peffect;
+		pcard->current.reason_effect = proc;
 		pcard->current.reason_player = sumplayer;
 		pcard->summon.player = sumplayer;
-		const auto sumtype = (peffect->get_value(pcard) & 0xff00ffff) | SUMMON_TYPE_SPECIAL;
+		const auto sumtype = (proc->get_value(pcard) & 0xff00ffff) | SUMMON_TYPE_SPECIAL;
 		pcard->summon.type = sumtype;
 		pcard->summon.location = pcard->current.location;
 		pcard->summon.sequence = pcard->current.sequence;
@@ -3348,7 +3334,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 				pduel->lua->add_param<PARAM_TYPE_INT>(sumtype);
 				pduel->lua->add_param<PARAM_TYPE_INT>(positions);
 				pduel->lua->add_param<PARAM_TYPE_INT>(sumplayer);
-				pduel->lua->add_param<PARAM_TYPE_EFFECT>(peffect);
+				pduel->lua->add_param<PARAM_TYPE_EFFECT>(proc);
 				if(!pduel->lua->check_condition(eff->target, 7))
 					continue;
 			}
@@ -3378,7 +3364,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		return FALSE;
 	}
 	case 24: {
-		group* pgroup = arg.ptarget;
+		group* pgroup = arg.cards_to_summon_g;
 		card* pcard = *pgroup->it++;
 		auto message = pduel->new_message(MSG_SPSUMMONING);
 		message->write<uint32_t>(pcard->data.code);
@@ -3390,7 +3376,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		return FALSE;
 	}
 	case 25: {
-		group* pgroup = arg.ptarget; 
+		group* pgroup = arg.cards_to_summon_g; 
 		if(is_flag(DUEL_CANNOT_SUMMON_OATH_OLD)) {
 			set_spsummon_counter(sumplayer);
 		}
@@ -3413,7 +3399,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 				}
 			}
 			if(cset.size()) {
-				raise_event(&cset, EVENT_SPSUMMON, arg.peffect, 0, sumplayer, sumplayer, 0);
+				raise_event(&cset, EVENT_SPSUMMON, arg.summon_proc_effect, 0, sumplayer, sumplayer, 0);
 				process_instant_event();
 				add_process(PROCESSOR_POINT_EVENT, 0, 0, 0, 0x101, TRUE);
 			}
@@ -3425,7 +3411,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		return FALSE;
 	}
 	case 26: {
-		group* pgroup = arg.ptarget;
+		group* pgroup = arg.cards_to_summon_g;
 		card_set cset;
 		for(auto cit = pgroup->container.begin(); cit != pgroup->container.end(); ) {
 			card* pcard = *cit++;
@@ -3441,17 +3427,16 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		}
 		if(pgroup->container.size() == 0) {
 			if(!is_flag(DUEL_CANNOT_SUMMON_OATH_OLD)) {
-				effect* peffect = arg.peffect;
-				remove_oath_effect(peffect);
-				if(peffect->is_flag(EFFECT_FLAG_COUNT_LIMIT) && (peffect->count_flag & EFFECT_COUNT_CODE_OATH)) {
-					dec_effect_code(peffect->count_code, peffect->count_flag, peffect->count_hopt_index, sumplayer);
+				auto proc = arg.summon_proc_effect;
+				remove_oath_effect(proc);
+				if(proc->is_flag(EFFECT_FLAG_COUNT_LIMIT) && (proc->count_flag & EFFECT_COUNT_CODE_OATH)) {
+					dec_effect_code(proc->count_code, proc->count_flag, proc->count_hopt_index, sumplayer);
 				}
 			}
-			if(effect_set* peset = (effect_set*)arg.ptr1) {
-				for(const auto& peffect : *peset)
+			if(arg.special_spsummon_cost_effects) {
+				for(const auto& peffect : *arg.special_spsummon_cost_effects)
 					remove_oath_effect(peffect);
-				delete peset;
-				arg.ptr1 = nullptr;
+				arg.special_spsummon_cost_effects.reset();
 			}
 			add_process(PROCESSOR_POINT_EVENT, 0, 0, 0, FALSE, 0);
 			return TRUE;
@@ -3459,13 +3444,12 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		return FALSE;
 	}
 	case 27: {
-		group* pgroup = arg.ptarget;
-		release_oath_relation(arg.peffect);
-		if(effect_set* peset = (effect_set*)arg.ptr1) {
-			for(const auto& peffect : *peset)
+		group* pgroup = arg.cards_to_summon_g;
+		release_oath_relation(arg.summon_proc_effect);
+		if(arg.special_spsummon_cost_effects) {
+			for(const auto& peffect : *arg.special_spsummon_cost_effects)
 				release_oath_relation(peffect);
-			delete peset;
-			arg.ptr1 = nullptr;
+			arg.special_spsummon_cost_effects.reset();
 		}
 		for(auto& pcard : pgroup->container) {
 			pcard->set_status(STATUS_SUMMONING, FALSE);
@@ -3477,7 +3461,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		return FALSE;
 	}
 	case 28: {
-		group* pgroup = arg.ptarget;
+		group* pgroup = arg.cards_to_summon_g;
 		pduel->new_message(MSG_SPSUMMONED);
 		if(!is_flag(DUEL_CANNOT_SUMMON_OATH_OLD)) {
 			set_spsummon_counter(sumplayer);
@@ -3495,7 +3479,7 @@ int32_t field::special_summon_rule(Processors::SpSummonRule& arg) {
 		for(auto& pcard : pgroup->container)
 			raise_single_event(pcard, 0, EVENT_SPSUMMON_SUCCESS, pcard->current.reason_effect, 0, pcard->current.reason_player, pcard->summon.player, 0);
 		process_single_event();
-		raise_event(&pgroup->container, EVENT_SPSUMMON_SUCCESS, arg.peffect, 0, sumplayer, sumplayer, 0);
+		raise_event(&pgroup->container, EVENT_SPSUMMON_SUCCESS, arg.summon_proc_effect, 0, sumplayer, sumplayer, 0);
 		process_instant_event();
 		if(core.current_chain.size() == 0) {
 			adjust_all();
