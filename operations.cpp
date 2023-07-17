@@ -13,6 +13,10 @@
 #include <algorithm>
 #include <iterator>
 
+void add_process(...) {
+
+}
+
 int32_t field::negate_chain(uint8_t chaincount) {
 	if(core.current_chain.size() == 0)
 		return FALSE;
@@ -5646,7 +5650,7 @@ int32_t field::activate_effect(Processors::ActivateEffect& arg) {
 		newchain.triggering_player = playerid;
 		phandler->set_status(STATUS_CHAINING, TRUE);
 		peffect->dec_count(playerid);
-		add_process(PROCESSOR_ADD_CHAIN, 0, 0, 0, 0, 0);
+		emplace_process<Processors::AddChain>();
 		add_process(PROCESSOR_QUICK_EFFECT, 0, 0, 0, FALSE, 1 - playerid);
 		infos.priorities[0] = 0;
 		infos.priorities[1] = 0;
