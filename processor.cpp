@@ -419,7 +419,7 @@ int32_t field::operator()(Processors::SpellSet& arg) {
 		++arg.step;
 	return PROCESSOR_FLAG_CONTINUE;
 }
-int32_t field::operator()(Processors::SpsummonStep& arg) {
+int32_t field::operator()(Processors::SpSummonStep& arg) {
 	if(special_summon_step(arg))
 		core.units.pop_front();
 	else
@@ -433,7 +433,7 @@ int32_t field::operator()(Processors::SpellSetGroup& arg) {
 		++arg.step;
 	return PROCESSOR_FLAG_CONTINUE;
 }
-int32_t field::operator()(Processors::SpsummonRuleGroup& arg) {
+int32_t field::operator()(Processors::SpSummonRuleGroup& arg) {
 	if(special_summon_rule_group(arg))
 		core.units.pop_front();
 	else
