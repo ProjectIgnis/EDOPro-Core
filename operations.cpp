@@ -579,7 +579,8 @@ int32_t field::damage(Processors::Damage& arg) {
 		}
 		arg.amount = val;
 		if(is_step) {
-			arg.step = 9;
+			arg.step = 1;
+			core.recover_damage_reserve.emplace_back(arg);
 			return TRUE;
 		}
 		return FALSE;
@@ -651,7 +652,8 @@ int32_t field::recover(Processors::Recover& arg) {
 			}
 		}
 		if(is_step) {
-			arg.step = 9;
+			arg.step = 1;
+			core.recover_damage_reserve.emplace_back(arg);
 			return TRUE;
 		}
 		return FALSE;
