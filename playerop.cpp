@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <stack>
 
-int32_t field::select_battle_command(Processors::SelectBattleCmd& arg) {
+bool field::process(Processors::SelectBattleCmd& arg) {
 	auto playerid = arg.playerid;
 	if(arg.step == 0) {
 		auto message = pduel->new_message(MSG_SELECT_BATTLECMD);
@@ -65,7 +65,7 @@ int32_t field::select_battle_command(Processors::SelectBattleCmd& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_idle_command(Processors::SelectIdleCmd& arg) {
+bool field::process(Processors::SelectIdleCmd& arg) {
 	auto playerid = arg.playerid;
 	if(arg.step == 0) {
 		auto message = pduel->new_message(MSG_SELECT_IDLECMD);
@@ -156,7 +156,7 @@ int32_t field::select_idle_command(Processors::SelectIdleCmd& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_effect_yes_no(Processors::SelectEffectYesNo& arg) {
+bool field::process(Processors::SelectEffectYesNo& arg) {
 	auto playerid = arg.playerid;
 	auto pcard = arg.pcard;
 	auto description = arg.description;
@@ -180,7 +180,7 @@ int32_t field::select_effect_yes_no(Processors::SelectEffectYesNo& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_yes_no(Processors::SelectYesNo& arg) {
+bool field::process(Processors::SelectYesNo& arg) {
 	auto playerid = arg.playerid;
 	auto description = arg.description;
 	if(arg.step == 0) {
@@ -201,7 +201,7 @@ int32_t field::select_yes_no(Processors::SelectYesNo& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_option(Processors::SelectOption& arg) {
+bool field::process(Processors::SelectOption& arg) {
 	auto playerid = arg.playerid;
 	if(arg.step == 0) {
 		returns.set<int32_t>(0, -1);
@@ -276,7 +276,7 @@ bool parse_response_cards(ProgressiveBuffer& returns, return_card_generic<Return
 bool inline field::parse_response_cards(bool cancelable) {
 	return ::parse_response_cards(returns, return_cards, core.select_cards, cancelable);
 }
-int32_t field::select_card(Processors::SelectCard& arg) {
+bool field::process(Processors::SelectCard& arg) {
 	auto playerid = arg.playerid;
 	auto cancelable = arg.cancelable;
 	auto min = arg.min;
@@ -331,7 +331,7 @@ int32_t field::select_card(Processors::SelectCard& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_card_codes(Processors::SelectCardCodes& arg) {
+bool field::process(Processors::SelectCardCodes& arg) {
 	auto playerid = arg.playerid;
 	auto cancelable = arg.cancelable;
 	auto min = arg.min;
@@ -385,7 +385,7 @@ int32_t field::select_card_codes(Processors::SelectCardCodes& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_unselect_card(Processors::SelectUnselectCard& arg) {
+bool field::process(Processors::SelectUnselectCard& arg) {
 	auto playerid = arg.playerid;
 	auto cancelable = arg.cancelable;
 	auto min = arg.min;
@@ -451,7 +451,7 @@ int32_t field::select_unselect_card(Processors::SelectUnselectCard& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_chain(Processors::SelectChain& arg) {
+bool field::process(Processors::SelectChain& arg) {
 	auto playerid = arg.playerid;
 	auto spe_count = arg.spe_count;
 	auto forced = arg.forced;
@@ -501,7 +501,7 @@ int32_t field::select_chain(Processors::SelectChain& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_place(Processors::SelectPlace& arg) {
+bool field::process(Processors::SelectPlace& arg) {
 	auto playerid = arg.playerid;
 	auto flag = arg.flag;
 	auto count = arg.count;
@@ -596,7 +596,7 @@ int32_t field::select_place(Processors::SelectPlace& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_position(Processors::SelectPosition& arg) {
+bool field::process(Processors::SelectPosition& arg) {
 	auto playerid = arg.playerid;
 	auto code = arg.code;
 	uint8_t positions = arg.positions;
@@ -636,7 +636,7 @@ int32_t field::select_position(Processors::SelectPosition& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_tribute(Processors::SelectTributeP& arg) {
+bool field::process(Processors::SelectTributeP& arg) {
 	auto playerid = arg.playerid;
 	auto cancelable = arg.cancelable;
 	auto min = arg.min;
@@ -701,7 +701,7 @@ int32_t field::select_tribute(Processors::SelectTributeP& arg) {
 		return TRUE;
 	}
 }
-int32_t field::select_counter(Processors::SelectCounter& arg) {
+bool field::process(Processors::SelectCounter& arg) {
 	auto playerid = arg.playerid;
 	auto countertype = arg.countertype;
 	auto count = arg.count;
@@ -774,7 +774,7 @@ static int32_t select_sum_check1(const std::vector<int32_t>& oparam, int32_t siz
 	return (acc > o1 && select_sum_check1(oparam, size, index + 1, acc - o1))
 	       || (o2 > 0 && acc > o2 && select_sum_check1(oparam, size, index + 1, acc - o2));
 }
-int32_t field::select_with_sum_limit(Processors::SelectSum& arg) {
+bool field::process(Processors::SelectSum& arg) {
 	auto playerid = arg.playerid;
 	auto acc = arg.acc;
 	auto min = arg.min;
@@ -864,7 +864,7 @@ int32_t field::select_with_sum_limit(Processors::SelectSum& arg) {
 	}
 	return TRUE;
 }
-int32_t field::sort_card(Processors::SortCard& arg) {
+bool field::process(Processors::SortCard& arg) {
 	auto playerid = arg.playerid;
 	auto is_chain = arg.is_chain;
 	if(arg.step == 0) {
@@ -907,7 +907,7 @@ int32_t field::sort_card(Processors::SortCard& arg) {
 	}
 	return TRUE;
 }
-int32_t field::announce_race(Processors::AnnounceRace& arg) {
+bool field::process(Processors::AnnounceRace& arg) {
 	auto playerid = arg.playerid;
 	auto count = arg.count;
 	auto available = arg.available;
@@ -942,7 +942,7 @@ int32_t field::announce_race(Processors::AnnounceRace& arg) {
 	}
 	return TRUE;
 }
-int32_t field::announce_attribute(Processors::AnnounceAttribute& arg) {
+bool field::process(Processors::AnnounceAttribute& arg) {
 	auto playerid = arg.playerid;
 	auto count = arg.count;
 	auto available = arg.available;
@@ -1068,7 +1068,7 @@ static int32_t is_declarable(const card_data& cd, const std::vector<uint64_t>& o
 #undef UNARY_OP
 #undef UNARY_OP_OP
 #undef GET_OP
-int32_t field::announce_card(Processors::AnnounceCard& arg) {
+bool field::process(Processors::AnnounceCard& arg) {
 	auto playerid = arg.playerid;
 	if(arg.step == 0) {
 		auto message = pduel->new_message(MSG_ANNOUNCE_CARD);
@@ -1092,7 +1092,7 @@ int32_t field::announce_card(Processors::AnnounceCard& arg) {
 	}
 	return TRUE;
 }
-int32_t field::announce_number(Processors::AnnounceNumber& arg) {
+bool field::process(Processors::AnnounceNumber& arg) {
 	auto playerid = arg.playerid;
 	if(arg.step == 0) {
 		auto message = pduel->new_message(MSG_ANNOUNCE_NUMBER);
@@ -1114,7 +1114,7 @@ int32_t field::announce_number(Processors::AnnounceNumber& arg) {
 		return TRUE;
 	}
 }
-int32_t field::rock_paper_scissors(Processors::RockPaperScissors& arg) {
+bool field::process(Processors::RockPaperScissors& arg) {
 	auto checkvalid = [&] {
 		const auto ret = returns.at<int32_t>(0);
 		if(ret < 1 || ret > 3) {
