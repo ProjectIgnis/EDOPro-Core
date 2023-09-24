@@ -20,6 +20,7 @@ LOCAL_SRC_FILES := card.cpp \
 				operations.cpp \
 				playerop.cpp \
 				processor.cpp \
+				processor_visit.cpp \
 				scriptlib.cpp
                    
 LOCAL_CFLAGS    :=  -pedantic -Wno-unused-parameter -Wextra -fvisibility=hidden -DOCGCORE_EXPORT_FUNCTIONS
