@@ -8,7 +8,7 @@
 #ifndef FIELD_H_
 #define FIELD_H_
 
-#include "mpark/variant.hpp"
+#include <variant>
 #include "containers_fwd.h"
 #include "common.h"
 #include "card.h"
@@ -992,7 +992,7 @@ struct RefreshRelay {
 		step(step_) {}
 };
 
-using processor_unit = mpark::variant<InvalidState, Adjust, Turn, RefreshLoc, Startup,
+using processor_unit = std::variant<InvalidState, Adjust, Turn, RefreshLoc, Startup,
 	SelectBattleCmd, SelectIdleCmd, SelectEffectYesNo, SelectYesNo,
 	SelectOption, SelectCard, SelectCardCodes, SelectUnselectCard,
 	SelectChain, SelectPlace, SelectDisField, SelectPosition,
@@ -1394,7 +1394,7 @@ public:
 	struct Step { uint16_t step; };
 	template<typename T, typename... Args>
 	constexpr inline void emplace_process(Step step, Args&&... args) {
-		core.subunits.emplace_back(mpark::in_place_type<T>, step.step, std::forward<Args>(args)...);
+		core.subunits.emplace_back(std::in_place_type<T>, step.step, std::forward<Args>(args)...);
 	}
 	template<typename T, typename... Args>
 	constexpr inline void emplace_process(Args&&... args) {
